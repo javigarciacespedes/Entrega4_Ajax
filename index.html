@@ -46,7 +46,7 @@
 
         const postAPI = async (peliculas) => {
             try {
-                const res = await fetch("https://api.myjson.com/bins", {
+                const res = await fetch("https://myjson.dit.upm.es/api/bins", {
                   method: 'POST', 
                   headers:{
                       "Content-Type": "application/json",
@@ -61,11 +61,19 @@
         }
         const getAPI = async () => {
             // Completar: Llamar a la API para leer la información guardada en myjson a través de la API
-
-          
+            let response = await fetch(localStorage.URL);
+            return await response.json();
         }
         const updateAPI = async (peliculas) => {
             // Completar: Actualizar la información a través de la API
+            let response = await fetch(
+                localStorage.URL,
+                {
+                    method: 'PUT',
+                    headers: {"Content-Type":"application/json",},
+                    body: JSON.stringify(mis_peliculas)
+                }
+            );
         }
 
  
@@ -79,20 +87,23 @@
               view += `
                 <div class="movie">
                    <div class="movie-img">
-                        <img class="show" data-my-id="${i}" src="${peliculas[i].miniatura}" onerror="this.src='files/placeholder.png'"/>
+                        <img data-my-id="${i}" src="${peliculas[i].miniatura}" onerror="this.src='files/placeholder.png'"/>
                    </div>
                    <div class="title">
                        ${peliculas[i].titulo || "<em>Sin título</em>"}
                    </div>
                    <div class="actions">
-                       <button class="edit" data-my-id="${i}">editar</button>
+                       <button class="edit" data-my-id="${i}">Editar</button>
+                       <button class="show" data-my-id="${i}">Ver</button>
+                       <button class="delete" data-my-id="${i}">Borrar</button>
                     </div>
                 </div>\n`;
               i = i + 1;
             };
 
             view += `<div class="actions">
-                        <!--Insertar aquí botones de "Añadir" y "Reset"-->
+                        <button class="new" >Añadir</button>
+                        <button class="reset" >Reset</button>
                     </div>`;
 
             return view;
@@ -126,13 +137,10 @@
         }
 
         const showView = (pelicula) => {
-            // Completar: genera HTML con información de la película
-            // ...
-
             return `
              <p>
-             
-             
+                La película <b>${pelicula.titulo}</b> fue 
+                dirigida por <b>${pelicula.director}</b>!
              </p>
              <div class="actions">
                 <button class="index">Volver</button>
@@ -140,11 +148,21 @@
         }
 
         const newView = () => {
-            // Completar: genera formulario para crear nuevo quiz
-            // ...
-
-            return `<h2>Crear Película</h2>
+            return `<h2>Crear Película:</h2>
+            <div class="field">
+                Título <br>
+                <input  type="text" id="titulo" placeholder="Título">
+                </div>
+                <div class="field">
+                Director <br>
+                <input  type="text" id="director" placeholder="Director">
+                </div>
+                <div class="field">
+                Miniatura <br>
+                <input  type="text" id="miniatura" placeholder="URL de la miniatura">
+                </div>
                 <div class="actions">
+                    <button class="create">Crear</button>
                     <button class="index">Volver</button>
                 </div>`;
         }
@@ -153,7 +171,7 @@
         // CONTROLADORES 
 
         const initContr = async () => {
-            if (!localStorage.URL) {
+            if (!localStorage.URL || localStorage.URL === "undefined") {
                 localStorage.URL = await postAPI(mis_peliculas_iniciales);
             }
             indexContr();
@@ -166,14 +184,21 @@
 
         const showContr = (i) => {
             // Completar: controlador que muestra la vista showView()
+            document.getElementById('main').innerHTML = showView(mis_peliculas[i]);
         }
 
         const newContr = () => {
             // Completar: controlador que muestra la vista newView()
+            document.getElementById('main').innerHTML = newView(); 
         }
 
         const createContr = async () => {
             // Completar: controlador que crea una película nueva en el modelo guardado en myjson
+            let nueva_pelicula =
+            {titulo: document.getElementById("titulo").value,  director: document.getElementById("director").value, "miniatura": document.getElementById("miniatura").value }; //Creamos un nuevo objeto con los datos introducidos en el newView()
+            mis_peliculas.push(nueva_pelicula); //.push = añade un nuevo dato a la cadena JSON. 
+            await updateAPI(mis_peliculas);
+            indexContr(); //Invocamos el menú inicial al terminar de crear una nueva película
         }
 
         const editContr = (i) => {
@@ -191,10 +216,18 @@
         const deleteContr = async (i) => {
             // Completar:  controlador que actualiza el modelo borrando la película seleccionada
             // Genera diálogo de confirmación: botón Aceptar devuelve true, Cancel false
+            if(confirm(`Borrar ${mis_peliculas[i].titulo}`)){
+                mis_peliculas.splice(i,1);
+                await updateAPI(mis_peliculas);
+                indexContr();
+            };
         }
 
         const resetContr = async () => {
             // Completar:  controlador que reinicia el modelo guardado en myjson con las películas originales
+            mis_peliculas = [... mis_peliculas_iniciales];
+            await updateAPI(mis_peliculas_iniciales);
+            indexContr();
         }
 
         // ROUTER de eventos
@@ -205,6 +238,11 @@
             if      (matchEvent(ev, '.index'))  indexContr  ();
             else if (matchEvent(ev, '.edit'))   editContr   (myId(ev));
             else if (matchEvent(ev, '.update')) updateContr (myId(ev));
+            else if (matchEvent(ev, '.show')) showContr (myId(ev));
+            else if (matchEvent(ev, '.new')) newContr ();
+            else if (matchEvent(ev, '.create')) createContr ();
+            else if (matchEvent(ev, '.delete')) deleteContr (myId(ev));
+            else if (matchEvent(ev, '.reset')) resetContr ();
         })
         
         
@@ -222,5 +260,3 @@
     
 </body>
 </html>
-
-
